@@ -1,0 +1,10 @@
+{
+  "name": "Scan & Pay",
+  "short_name": "ScanPay",
+  "description": "Self-Checkout Scan & Pay",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#58a6ff",
+  "orientation": "portrait"
+}

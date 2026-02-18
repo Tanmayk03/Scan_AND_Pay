@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0f1419] text-[#e6edf3] antialiased font-sans leading-normal;
+  }
+  a {
+    @apply text-accent no-underline;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+  input, select, textarea {
+    @apply font-sans;
+  }
+}
+
+#root {
+  @apply min-h-screen;
+}
