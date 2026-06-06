@@ -1,0 +1,31 @@
+services:
+  # 1. Express Backend Web Service
+  - type: web
+    name: scanpay-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: RISK_THRESHOLD
+        value: "50"
+      - key: RANDOM_CHECK_PERCENT
+        value: "5"
+      - key: JWT_SECRET
+        generateValue: true # Render will automatically generate a secure key
+      - key: MONGODB_URI
+        sync: false # You will enter your MongoDB Atlas URL in the Render dashboard
+
+  # 2. React Frontend Static Site
+  - type: static
+    name: scanpay-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false # You will enter your scanpay-backend URL here once deployed
