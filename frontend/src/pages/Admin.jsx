@@ -43,7 +43,7 @@ export default function Admin() {
     { id: 'products', label: 'Products' },
     { id: 'mismatches', label: 'Weight Mismatches' },
     { id: 'flagged', label: 'Flagged' },
-    { id: 'ml-guard', label: 'ML Fraud Guard' },
+    { id: 'ml-guard', label: 'Risk Engine' },
     { id: 'random-check', label: 'Random Check' },
     { id: 'config', label: 'Config' },
     { id: 'audit', label: 'Audit' },
