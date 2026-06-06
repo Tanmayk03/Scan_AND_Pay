@@ -19,9 +19,19 @@ services:
         generateValue: true # Render will automatically generate a secure key
       - key: MONGODB_URI
         sync: false # You will enter your MongoDB Atlas URL in the Render dashboard
+      - key: ML_SERVICE_URL
+        sync: false # You will enter your scanpay-ml URL here once deployed
+
+  # 2. Python FastAPI ML Microservice
+  - type: web
+    name: scanpay-ml
+    env: python
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT
 
 staticSites:
-  # 2. React Frontend Static Site
+  # 3. React Frontend Static Site
   - name: scanpay-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build

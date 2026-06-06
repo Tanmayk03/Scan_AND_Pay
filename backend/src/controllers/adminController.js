@@ -101,8 +101,9 @@ export async function listAuditLogs(req, res, next) {
 
 export async function getMlStatus(req, res, next) {
   try {
-    const statusUrl = 'http://127.0.0.1:8000/status';
-    const metricsUrl = 'http://127.0.0.1:8000/metrics';
+    const mlUrl = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
+    const statusUrl = `${mlUrl}/status`;
+    const metricsUrl = `${mlUrl}/metrics`;
     
     let mlStatus = { status: 'offline', model_loaded: false, has_metrics: false };
     let mlMetrics = null;
