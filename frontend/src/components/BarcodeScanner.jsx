@@ -12,66 +12,60 @@ const SCANNER_CONTAINER_ID = 'barcode-scanner-container';
 export default function BarcodeScanner({ onScan, disabled = false }) {
   const [status, setStatus] = useState('idle'); // idle | starting | scanning | error | unavailable
   const [errorMessage, setErrorMessage] = useState('');
-  const scannerRef = useRef(null);
-  const startedRef = useRef(false); // true only after start() has completed successfully
   const lastScannedRef = useRef('');
-
-  function safeStop(instance) {
-    if (!instance || typeof instance.stop !== 'function') return;
-    try {
-      const p = instance.stop();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch (_) {
-      // "Cannot stop, scanner is not running or paused" when start() never completed
-    }
-  }
 
   useEffect(() => {
     if (disabled) {
-      if (scannerRef.current && startedRef.current) {
-        safeStop(scannerRef.current);
-        startedRef.current = false;
-      }
-      scannerRef.current = null;
       setStatus('idle');
       return;
     }
 
-    let mounted = true;
-    startedRef.current = false;
-    const html5Qr = new Html5Qrcode(SCANNER_CONTAINER_ID);
+    let isMounted = true;
+    let html5Qr = null;
 
     async function doStart() {
       try {
+        if (!isMounted) return;
         setStatus('starting');
         setErrorMessage('');
+        
+        // Wait a brief moment to ensure DOM element is ready (helps with React 18 strict mode unmount/remount)
+        await new Promise(r => setTimeout(r, 50));
+        if (!isMounted) return;
+
         const devices = await Html5Qrcode.getCameras();
         if (!devices || devices.length === 0) {
-          setStatus('unavailable');
-          setErrorMessage('No camera found');
+          if (isMounted) {
+            setStatus('unavailable');
+            setErrorMessage('No camera found');
+          }
           return;
         }
-        if (!mounted) return;
-        const cameraId = devices[0].id;
+
+        html5Qr = new Html5Qrcode(SCANNER_CONTAINER_ID);
+        
         await html5Qr.start(
-          cameraId,
+          { facingMode: 'environment' }, // Better than devices[0].id for mobile
           { fps: 10, qrbox: { width: 250, height: 150 } },
           (decodedText) => {
-            if (!mounted || !onScan) return;
+            if (!isMounted || !onScan) return;
             if (decodedText && decodedText !== lastScannedRef.current) {
               lastScannedRef.current = decodedText;
               onScan(decodedText);
               setTimeout(() => { lastScannedRef.current = ''; }, 2000);
             }
           },
-          () => {}
+          () => {} // ignore scan errors
         );
-        if (!mounted) return;
-        startedRef.current = true;
-        scannerRef.current = html5Qr;
-        setStatus('scanning');
+        
+        if (isMounted) {
+          setStatus('scanning');
+        } else {
+          // If unmounted while starting, stop it immediately
+          html5Qr.stop().catch(() => {});
+        }
       } catch (err) {
-        if (!mounted) return;
+        if (!isMounted) return;
         console.error('Scanner error:', err);
         setStatus(err.name === 'NotAllowedError' ? 'unavailable' : 'error');
         setErrorMessage(err.message || 'Camera access failed');
@@ -79,13 +73,17 @@ export default function BarcodeScanner({ onScan, disabled = false }) {
     }
 
     doStart();
+
     return () => {
-      mounted = false;
-      if (startedRef.current) {
-        safeStop(html5Qr);
-        startedRef.current = false;
+      isMounted = false;
+      if (html5Qr) {
+        try {
+          // Html5Qrcode.getState() might be available, but blindly calling stop inside a try-catch is safer
+          html5Qr.stop().catch(() => {});
+        } catch (e) {
+          // ignore
+        }
       }
-      scannerRef.current = null;
       setStatus('idle');
     };
   }, [disabled, onScan]);

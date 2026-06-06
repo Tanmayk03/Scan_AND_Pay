@@ -25,6 +25,7 @@ export async function api(path, options = {}) {
 
 export const productApi = {
   getByBarcode: (barcode) => api(`/api/product/${encodeURIComponent(barcode)}`),
+  getCatalog: (params) => api('/api/catalog' + (params ? '?' + new URLSearchParams(params).toString() : '')),
 };
 
 export const networkApi = {
@@ -68,4 +69,5 @@ export const adminApi = {
   getConfig: () => api('/api/admin/config'),
   setConfig: (body) => api('/api/admin/config', { method: 'PUT', body: JSON.stringify(body) }),
   auditLogs: (params) => api('/api/admin/audit' + (params ? '?' + new URLSearchParams(params).toString() : '')),
+  getMlStatus: () => api('/api/admin/ml-status'),
 };

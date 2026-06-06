@@ -17,6 +17,7 @@ const router = express.Router();
 
 // ----- Public -----
 router.get('/network-url', networkController.getNetworkUrl);
+router.get('/catalog', productController.listPublic);
 router.get('/product/:barcode', productController.getByBarcode);
 router.post('/basket/log', basketController.logAction);
 router.post('/session/start', sessionController.start);
@@ -43,5 +44,6 @@ router.post('/admin/orders/:id/manual-check', authenticate, authorize('admin', '
 router.get('/admin/config', authenticate, authorize('admin'), adminController.getConfig);
 router.put('/admin/config', authenticate, authorize('admin'), adminController.setConfig);
 router.get('/admin/audit', authenticate, authorize('admin'), adminController.listAuditLogs);
+router.get('/admin/ml-status', authenticate, authorize('admin'), adminController.getMlStatus);
 
 export default router;

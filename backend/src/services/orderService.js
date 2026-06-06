@@ -73,6 +73,7 @@ export async function createOrderFromBasket({ sessionId, items }, req) {
     orderValue: totalPrice,
     scanDurationSeconds,
     weightMismatch: false,
+    items: orderItems,
   });
   const flagged = shouldFlagOrder(riskScore);
 

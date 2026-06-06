@@ -98,3 +98,48 @@ export async function listAuditLogs(req, res, next) {
     next(err);
   }
 }
+
+export async function getMlStatus(req, res, next) {
+  try {
+    const statusUrl = 'http://127.0.0.1:8000/status';
+    const metricsUrl = 'http://127.0.0.1:8000/metrics';
+    
+    let mlStatus = { status: 'offline', model_loaded: false, has_metrics: false };
+    let mlMetrics = null;
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1000);
+      
+      const statusRes = await fetch(statusUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      if (statusRes.ok) {
+        mlStatus = await statusRes.json();
+        
+        if (mlStatus.has_metrics) {
+          const metricsController = new AbortController();
+          const mTimeoutId = setTimeout(() => metricsController.abort(), 1000);
+          const metricsRes = await fetch(metricsUrl, { signal: metricsController.signal });
+          clearTimeout(mTimeoutId);
+          if (metricsRes.ok) {
+            mlMetrics = await metricsRes.json();
+          }
+        }
+      }
+    } catch (err) {
+      // FastAPI is offline
+    }
+    
+    res.json({
+      success: true,
+      status: mlStatus.status,
+      modelLoaded: mlStatus.model_loaded,
+      metrics: mlMetrics,
+      fallbackActive: mlStatus.status === 'offline' || !mlStatus.model_loaded
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+

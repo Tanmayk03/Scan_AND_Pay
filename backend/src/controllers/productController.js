@@ -19,6 +19,16 @@ export async function getByBarcode(req, res, next) {
   }
 }
 
+/** GET /api/catalog - Public product catalog */
+export async function listPublic(req, res, next) {
+  try {
+    const products = await productService.listPublic(req.query);
+    res.json({ success: true, products });
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** GET /api/products - Admin: list products */
 export async function list(req, res, next) {
   try {

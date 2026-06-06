@@ -1,13 +1,9 @@
-/**
- * Self-Checkout: scanner, basket, session, checkout flow.
- * - Start session on mount
- * - Add/remove items, log to backend
- * - Checkout: lock basket, create order, show QR
- */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import BarcodeScanner from '../components/BarcodeScanner';
 import Basket from '../components/Basket';
 import CheckoutQR from '../components/CheckoutQR';
+import ProductCatalog from '../components/ProductCatalog';
+import PaymentModal from '../components/PaymentModal';
 import { productApi, basketApi, sessionApi, orderApi, networkApi } from '../api';
 
 function buildBasketItem(product, quantity = 1, scanKey = '') {
@@ -31,13 +27,16 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const [manualBarcode, setManualBarcode] = useState('');
   const [mobileUrl, setMobileUrl] = useState(null);
+  
+  const [showCatalog, setShowCatalog] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  
   const sessionStarted = useRef(false);
 
   useEffect(() => {
     networkApi.getUrl().then((r) => r.url && setMobileUrl(r.url)).catch(() => {});
   }, []);
 
-  // Start session on mount
   useEffect(() => {
     if (sessionStarted.current) return;
     sessionStarted.current = true;
@@ -48,7 +47,7 @@ export default function Checkout() {
       })
       .catch((err) => {
         const msg = err.message || 'Failed to start session';
-        const hint = err.status === 500 ? ' Ensure the backend is running (cd backend && npm run dev) and MongoDB is available.' : '';
+        const hint = err.status === 500 ? ' Ensure the backend is running.' : '';
         setError(msg + hint);
       })
       .finally(() => setLoading(false));
@@ -62,32 +61,38 @@ export default function Checkout() {
     [sessionId]
   );
 
+  const handleAddProduct = useCallback((product) => {
+    if (!sessionId || checkoutResult) return;
+    setError('');
+    setBasket((prev) => {
+      const existing = prev.find((i) => i.productId === product._id);
+      let next;
+      if (existing) {
+        next = prev.map((i) =>
+          i.productId === product._id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      } else {
+        next = [...prev, buildBasketItem(product, 1)];
+      }
+      return next;
+    });
+    logBasketAction('ADD_ITEM', { barcode: product.barcode, productId: product._id, name: product.name });
+    setShowCatalog(false);
+  }, [sessionId, checkoutResult, logBasketAction]);
+
   const handleScan = useCallback(
     async (barcode) => {
       if (!sessionId || checkoutResult) return;
       setError('');
       try {
         const res = await productApi.getByBarcode(barcode);
-        const product = res.product;
-        setBasket((prev) => {
-          const existing = prev.find((i) => i.productId === product._id);
-          let next;
-          if (existing) {
-            next = prev.map((i) =>
-              i.productId === product._id ? { ...i, quantity: i.quantity + 1 } : i
-            );
-          } else {
-            next = [...prev, buildBasketItem(product, 1)];
-          }
-          return next;
-        });
-        logBasketAction('ADD_ITEM', { barcode, productId: product._id, name: product.name });
+        handleAddProduct(res.product);
       } catch (err) {
         if (err.status === 404) setError('Product not found');
         else setError(err.message || 'Lookup failed');
       }
     },
-    [sessionId, checkoutResult, logBasketAction]
+    [sessionId, checkoutResult, handleAddProduct]
   );
 
   const handleRemove = useCallback(
@@ -107,8 +112,13 @@ export default function Checkout() {
     [checkoutResult, logBasketAction]
   );
 
-  const handleCheckout = useCallback(async () => {
+  const handleCheckoutClick = () => {
     if (!sessionId || basket.length === 0 || checkoutResult) return;
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = useCallback(async () => {
+    setShowPayment(false);
     setCheckoutLoading(true);
     setError('');
     try {
@@ -147,65 +157,97 @@ export default function Checkout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-4 max-w-[900px] mx-auto">
-        <div className="flex items-center justify-center min-h-[40vh] text-muted">Starting session…</div>
+      <div className="min-h-screen p-4 max-w-[900px] mx-auto flex items-center justify-center">
+        <div className="text-muted animate-pulse font-semibold">Starting terminal session…</div>
       </div>
     );
   }
 
+  const basketTotal = basket.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
   return (
-    <div className="min-h-screen p-4 max-w-[900px] mx-auto">
-      <header className="flex justify-between items-center mb-6 flex-wrap gap-3">
-        <h1 className="m-0 text-2xl font-bold">Scan & Pay</h1>
-        <a href="/admin" className="text-sm text-accent">Admin</a>
+    <div className="min-h-screen p-4 max-w-[1000px] mx-auto animate-fade-in print-hidden">
+      <header className="flex justify-between items-center mb-6 flex-wrap gap-3 bg-surface p-4 rounded-xl border border-border shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white shadow-lg">S</div>
+          <h1 className="m-0 text-xl font-bold tracking-tight">Scan & Pay</h1>
+        </div>
+        <a href="/admin/login" className="text-sm font-semibold text-muted hover:text-accent transition-colors">Admin Access</a>
       </header>
+
       {mobileUrl && (
         <p className="text-muted text-sm mb-4">
-          Open on phone (Safari): <a href={mobileUrl} className="text-accent break-all" target="_blank" rel="noopener noreferrer">{mobileUrl}</a>
+          Open on phone: <a href={mobileUrl} className="text-accent break-all hover:underline" target="_blank" rel="noopener noreferrer">{mobileUrl}</a>
         </p>
       )}
 
       {error && (
-        <div className="bg-error/15 border border-error text-error py-3 px-4 rounded-lg mb-4" role="alert">
+        <div className="bg-error/15 border border-error text-error py-3 px-4 rounded-lg mb-6 shadow-sm" role="alert">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <section className="flex flex-col gap-3">
-          <BarcodeScanner onScan={handleScan} disabled={!!checkoutResult} />
-          <form onSubmit={handleManualSubmit} className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Or enter barcode"
-              value={manualBarcode}
-              onChange={(e) => setManualBarcode(e.target.value)}
-              disabled={!!checkoutResult}
-              autoComplete="off"
-              className="flex-1 py-2.5 px-3 border border-border rounded-lg bg-surface text-[#e6edf3]"
-            />
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+        <section className="flex flex-col gap-4 lg:col-span-3">
+          <BarcodeScanner onScan={handleScan} disabled={!!checkoutResult || showPayment || showCatalog} />
+          
+          <div className="flex gap-2 bg-surface p-4 rounded-xl border border-border shadow-sm">
+            <form onSubmit={handleManualSubmit} className="flex flex-1 gap-2">
+              <input
+                type="text"
+                placeholder="Barcode"
+                value={manualBarcode}
+                onChange={(e) => setManualBarcode(e.target.value)}
+                disabled={!!checkoutResult}
+                autoComplete="off"
+                className="flex-1 py-2.5 px-3 border border-border rounded-lg bg-bg-dark text-[#e6edf3] focus:border-accent outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                disabled={!!checkoutResult || !manualBarcode.trim()}
+                className="py-2.5 px-5 bg-border hover:bg-muted text-[#e6edf3] border-0 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              >
+                Add
+              </button>
+            </form>
             <button
-              type="submit"
+              type="button"
+              onClick={() => setShowCatalog(true)}
               disabled={!!checkoutResult}
-              className="py-2.5 px-4 bg-accent text-white border-0 rounded-lg font-semibold"
+              className="py-2.5 px-5 bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
             >
-              Add
+              Catalog
             </button>
-          </form>
+          </div>
         </section>
 
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-4 lg:col-span-2">
           <Basket items={basket} onRemove={handleRemove} disabled={!!checkoutResult} />
           <button
             type="button"
-            className="w-full py-4 bg-success text-white border-0 rounded-lg text-lg font-bold disabled:bg-border disabled:text-muted disabled:cursor-not-allowed hover:brightness-110"
-            onClick={handleCheckout}
+            className="w-full py-4 bg-success text-white border-0 rounded-xl text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-success/20 transition-all active:scale-[0.98]"
+            onClick={handleCheckoutClick}
             disabled={basket.length === 0 || checkoutLoading}
           >
-            {checkoutLoading ? 'Processing…' : 'Checkout'}
+            {checkoutLoading ? 'Processing…' : `Checkout (₹${basketTotal.toFixed(2)})`}
           </button>
         </section>
       </div>
+
+      {showCatalog && (
+        <ProductCatalog 
+          onClose={() => setShowCatalog(false)} 
+          onSelect={handleAddProduct} 
+        />
+      )}
+
+      {showPayment && (
+        <PaymentModal 
+          total={basketTotal} 
+          onSuccess={handlePaymentSuccess} 
+          onClose={() => setShowPayment(false)} 
+        />
+      )}
 
       {checkoutResult && (
         <CheckoutQR
@@ -214,6 +256,7 @@ export default function Checkout() {
           totalPrice={checkoutResult.totalPrice}
           expectedWeightSum={checkoutResult.expectedWeightSum}
           expiresAt={checkoutResult.expiresAt}
+          basket={basket}
           onClose={handleCloseQR}
         />
       )}

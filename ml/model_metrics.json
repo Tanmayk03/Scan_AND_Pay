@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.9967,
+  "precision": 1.0,
+  "recall": 0.9773,
+  "f1_score": 0.9885,
+  "confusion_matrix": [
+    [
+      256,
+      0
+    ],
+    [
+      1,
+      43
+    ]
+  ],
+  "feature_importances": {
+    "weight_mismatch_ratio": 0.4899887838844642,
+    "scan_duration_seconds": 0.23720744587942952,
+    "average_item_price": 0.12921758234343148,
+    "item_count": 0.07560813761643975,
+    "order_value": 0.0524202525165423,
+    "category_diversity": 0.010235893382756822,
+    "hour_of_day": 0.005321904376936002
+  },
+  "trained_at": "2026-06-06 22:27:11",
+  "dataset_size": 1500
+}

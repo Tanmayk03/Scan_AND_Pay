@@ -7,7 +7,7 @@ import { verifyApi } from '../api';
 
 const VERIFY_URL_BASE = import.meta.env.VITE_VERIFY_BASE || (typeof window !== 'undefined' ? window.location.origin : '');
 
-export default function CheckoutQR({ orderId, qrToken, totalPrice, expectedWeightSum, expiresAt, onClose }) {
+export default function CheckoutQR({ orderId, qrToken, totalPrice, expectedWeightSum, expiresAt, basket = [], onClose }) {
   const [weightInput, setWeightInput] = useState('');
   const [weightResult, setWeightResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -88,13 +88,55 @@ export default function CheckoutQR({ orderId, qrToken, totalPrice, expectedWeigh
           )}
         </div>
 
-        <button
-          type="button"
-          className="w-full mt-4 py-3 bg-border text-[#e6edf3] border-0 rounded-lg font-semibold hover:bg-muted"
-          onClick={onClose}
-        >
-          Done
-        </button>
+        <div className="flex gap-2 mt-4 print-hidden">
+          <button
+            type="button"
+            className="flex-1 py-3 bg-surface border border-border text-[#e6edf3] rounded-lg font-semibold hover:bg-bg-dark transition-colors"
+            onClick={() => window.print()}
+          >
+            Print Receipt
+          </button>
+          <button
+            type="button"
+            className="flex-1 py-3 bg-accent text-white border-0 rounded-lg font-semibold hover:brightness-110 transition-colors"
+            onClick={onClose}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+
+      {/* Hidden printable receipt */}
+      <div className="hidden print-receipt p-8 text-black bg-white">
+        <h1 className="text-2xl font-bold mb-2">Scan & Pay Receipt</h1>
+        <p className="text-sm text-gray-500 mb-6">Order ID: {orderId}</p>
+        
+        <table className="w-full text-left border-collapse mb-6">
+          <thead>
+            <tr className="border-b-2 border-gray-300">
+              <th className="py-2">Item</th>
+              <th className="py-2 text-right">Qty</th>
+              <th className="py-2 text-right">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {basket.map((item, idx) => (
+              <tr key={idx} className="border-b border-gray-200">
+                <td className="py-2">{item.name}</td>
+                <td className="py-2 text-right">x{item.quantity}</td>
+                <td className="py-2 text-right">₹{(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex justify-between font-bold text-xl mb-8">
+          <span>Total</span>
+          <span>₹{totalPrice.toFixed(2)}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <QRCodeSVG value={verifyUrl} size={150} level="M" />
+          <p className="mt-2 text-sm text-gray-500">Scan to verify</p>
+        </div>
       </div>
     </div>
   );
