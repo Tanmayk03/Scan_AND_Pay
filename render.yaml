@@ -20,10 +20,9 @@ services:
       - key: MONGODB_URI
         sync: false # You will enter your MongoDB Atlas URL in the Render dashboard
 
+staticSites:
   # 2. React Frontend Static Site
-  - type: web
-    name: scanpay-frontend
-    env: static
+  - name: scanpay-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build
     publishDir: dist
