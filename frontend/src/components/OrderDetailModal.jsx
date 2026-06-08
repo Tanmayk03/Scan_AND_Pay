@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function OrderDetailModal({ order, onClose }) {
   // Prevent body scrolling when modal is open
@@ -28,7 +29,7 @@ export default function OrderDetailModal({ order, onClose }) {
     return 'bg-success/20 text-success border-success/30';
   };
 
-  return (
+  return createPortal(
     <div 
       className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] p-4 animate-fade-in backdrop-blur-sm"
       onClick={onClose}
@@ -164,6 +165,7 @@ export default function OrderDetailModal({ order, onClose }) {
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
