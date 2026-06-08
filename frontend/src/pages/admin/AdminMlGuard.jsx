@@ -5,6 +5,7 @@ export default function AdminMlGuard() {
   const [mlData, setMlData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [insightsData, setInsightsData] = useState(null);
   
   // Simulator states
   const [orderValue, setOrderValue] = useState(250);
@@ -25,6 +26,13 @@ export default function AdminMlGuard() {
       setError('');
       const data = await adminApi.getMlStatus();
       setMlData(data);
+      
+      try {
+        const insightsRes = await adminApi.getMlInsights();
+        setInsightsData(insightsRes.insights || null);
+      } catch (err) {
+        console.warn('Failed to fetch insights:', err);
+      }
     } catch (err) {
       setError(err.message || 'Failed to fetch risk engine status');
     } finally {
@@ -270,6 +278,52 @@ export default function AdminMlGuard() {
                 </div>
               </div>
             </div>
+
+            {/* Business Intelligence Insights Dashboard */}
+            {insightsData && (
+              <div className="flex flex-col gap-6 mt-2">
+                <h4 className="m-0 text-xs font-bold uppercase tracking-wider text-muted">Checkout Behavior Insights</h4>
+                
+                {/* Insights grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Gauge matched rate */}
+                  {renderMatchGauge(
+                    insightsData.weightVerification?.matches || 0,
+                    insightsData.weightVerification?.mismatches || 0
+                  )}
+
+                  {/* Scan speed KPI */}
+                  <div className="bg-surface p-5 rounded-xl border border-border shadow-sm flex items-center gap-6">
+                    <div className="w-16 h-16 bg-bg-dark rounded-xl flex items-center justify-center text-accent text-3xl font-extrabold border border-border">
+                      ⏱️
+                    </div>
+                    <div>
+                      <h5 className="m-0 text-xs font-bold uppercase tracking-wider text-muted">Checkout Scan Speed</h5>
+                      <div className="text-xl font-bold mt-1">
+                        {insightsData.scanSpeed?.avgSpeed || 0}s <span className="text-sm font-medium text-muted">/ item</span>
+                      </div>
+                      <p className="text-[10px] text-muted m-0 mt-1 leading-normal">
+                        Average session duration: <span className="font-semibold">{insightsData.scanSpeed?.avgDuration || 0}s</span> across {insightsData.scanSpeed?.totalTrackedOrders || 0} tracked checkouts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                  {/* Transaction value bar chart */}
+                  <div className="md:col-span-3 bg-surface p-5 rounded-xl border border-border shadow-sm">
+                    <h5 className="m-0 mb-1 text-xs font-bold uppercase tracking-wider text-muted">Transaction Value Distribution</h5>
+                    <p className="m-0 mb-5 text-[10px] text-muted">Distribution of total purchase amounts in rupees across recent checkout orders.</p>
+                    {renderValueChart(insightsData.valueBuckets || {})}
+                  </div>
+
+                  {/* Risk Profile Stacked bar */}
+                  <div className="md:col-span-2 flex">
+                    {renderRiskInsights(insightsData.riskDistribution || { low: 0, medium: 0, high: 0 })}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="bg-surface p-8 rounded-xl border border-border text-center shadow-sm">
@@ -480,6 +534,206 @@ export default function AdminMlGuard() {
         </div>
       </div>
       
+    </div>
+  );
+}
+
+// --- SVG Visualization Helper Functions ---
+
+function renderValueChart(buckets) {
+  const values = [
+    buckets.under50 || 0,
+    buckets.from50to100 || 0,
+    buckets.from100to250 || 0,
+    buckets.from250to500 || 0,
+    buckets.over500 || 0
+  ];
+  const labels = ['<₹50', '₹50-100', '₹100-250', '₹250-500', '₹500+'];
+  const maxVal = Math.max(...values, 5);
+  
+  const chartWidth = 500;
+  const chartHeight = 160;
+  const padding = 20;
+  const graphWidth = chartWidth - padding * 2;
+  const graphHeight = chartHeight - padding * 2;
+  const barWidth = 50;
+  const spacing = (graphWidth - barWidth * values.length) / (values.length - 1);
+  
+  return (
+    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto">
+      {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+        const y = padding + graphHeight * (1 - ratio);
+        const gridValue = Math.round(maxVal * ratio);
+        return (
+          <g key={idx}>
+            <line 
+              x1={padding} 
+              y1={y} 
+              x2={chartWidth - padding} 
+              y2={y} 
+              className="stroke-border/40" 
+              strokeDasharray="3 3"
+            />
+            <text 
+              x={padding - 5} 
+              y={y + 4} 
+              className="fill-muted text-[10px] text-right font-medium"
+              textAnchor="end"
+            >
+              {gridValue}
+            </text>
+          </g>
+        );
+      })}
+      
+      {values.map((val, idx) => {
+        const barHeight = (val / maxVal) * graphHeight;
+        const x = padding + idx * (barWidth + spacing);
+        const y = padding + graphHeight - barHeight;
+        
+        return (
+          <g key={idx} className="group">
+            <rect
+              x={x}
+              y={y}
+              width={barWidth}
+              height={Math.max(barHeight, 2)}
+              rx="4"
+              className="fill-accent/80 hover:fill-accent transition-colors duration-200 cursor-pointer"
+            />
+            <text
+              x={x + barWidth / 2}
+              y={y - 6}
+              className="fill-[#e6edf3] text-[10px] font-bold"
+              textAnchor="middle"
+            >
+              {val}
+            </text>
+            <text
+              x={x + barWidth / 2}
+              y={chartHeight - 4}
+              className="fill-muted text-[9px] font-semibold uppercase tracking-wider"
+              textAnchor="middle"
+            >
+              {labels[idx]}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function renderMatchGauge(matches, mismatches) {
+  const total = matches + mismatches;
+  const rate = total > 0 ? (matches / total) * 100 : 100;
+  
+  const radius = 45;
+  const circ = 2 * Math.PI * radius;
+  const strokeOffset = circ - (rate / 100) * circ;
+  
+  return (
+    <div className="flex items-center gap-6 bg-surface p-5 rounded-xl border border-border shadow-sm w-full">
+      <div className="relative w-20 h-20 flex-shrink-0">
+        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            className="stroke-bg-dark fill-none"
+            strokeWidth="8"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            className={`fill-none transition-all duration-700 ease-out ${
+              rate >= 90 ? 'stroke-success' : rate >= 70 ? 'stroke-warning' : 'stroke-error'
+            }`}
+            strokeWidth="8"
+            strokeDasharray={circ}
+            strokeDashoffset={strokeOffset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-base font-extrabold text-[#e6edf3]">{Math.round(rate)}%</span>
+          <span className="text-[0.55rem] text-muted uppercase font-bold tracking-wider">Match</span>
+        </div>
+      </div>
+      
+      <div className="flex-1 space-y-1">
+        <h5 className="m-0 text-xs font-bold uppercase tracking-wider text-muted">Weight Match Rate</h5>
+        <div className="text-sm font-semibold">{matches} of {total} checks matched</div>
+        <div className="flex gap-4 text-xs text-muted">
+          <span>Match: <strong className="text-success">{matches}</strong></span>
+          <span>Mismatch: <strong className="text-error">{mismatches}</strong></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function renderRiskInsights(dist) {
+  const total = dist.low + dist.medium + dist.high;
+  const lowPct = total > 0 ? (dist.low / total) * 100 : 0;
+  const medPct = total > 0 ? (dist.medium / total) * 100 : 0;
+  const highPct = total > 0 ? (dist.high / total) * 100 : 0;
+  
+  return (
+    <div className="bg-surface p-5 rounded-xl border border-border shadow-sm flex flex-col justify-between w-full">
+      <div>
+        <h4 className="m-0 mb-1 text-xs font-bold uppercase tracking-wider text-muted">Risk Score Profile</h4>
+        <p className="m-0 mb-4 text-[10px] text-muted">Distribution of transaction risk classifications computed by the engine.</p>
+        
+        <div className="w-full h-4 bg-bg-dark rounded-full overflow-hidden flex mb-4 border border-border/40">
+          {dist.low > 0 && (
+            <div 
+              className="bg-success/80 hover:brightness-110 transition-all cursor-pointer animate-fade-in" 
+              style={{ width: `${lowPct}%` }}
+              title={`Low Risk: ${dist.low}`}
+            ></div>
+          )}
+          {dist.medium > 0 && (
+            <div 
+              className="bg-warning/80 hover:brightness-110 transition-all cursor-pointer animate-fade-in" 
+              style={{ width: `${medPct}%` }}
+              title={`Medium Risk: ${dist.medium}`}
+            ></div>
+          )}
+          {dist.high > 0 && (
+            <div 
+              className="bg-error/80 hover:brightness-110 transition-all cursor-pointer animate-fade-in" 
+              style={{ width: `${highPct}%` }}
+              title={`High Risk: ${dist.high}`}
+            ></div>
+          )}
+          {total === 0 && (
+            <div className="w-full bg-bg-dark text-muted text-[10px] flex items-center justify-center italic">No data</div>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted flex items-center gap-1.5 font-semibold">
+              <span className="w-2 h-2 rounded bg-success"></span> LOW RISK
+            </span>
+            <span className="text-sm font-bold mt-0.5">{dist.low} <span className="text-[10px] text-muted font-normal">({Math.round(lowPct)}%)</span></span>
+          </div>
+          <div className="flex flex-col border-l border-border/50 pl-2">
+            <span className="text-[10px] text-muted flex items-center gap-1.5 font-semibold">
+              <span className="w-2 h-2 rounded bg-warning"></span> MED RISK
+            </span>
+            <span className="text-sm font-bold mt-0.5">{dist.medium} <span className="text-[10px] text-muted font-normal">({Math.round(medPct)}%)</span></span>
+          </div>
+          <div className="flex flex-col border-l border-border/50 pl-2">
+            <span className="text-[10px] text-muted flex items-center gap-1.5 font-semibold">
+              <span className="w-2 h-2 rounded bg-error"></span> HIGH RISK
+            </span>
+            <span className="text-sm font-bold mt-0.5">{dist.high} <span className="text-[10px] text-muted font-normal">({Math.round(highPct)}%)</span></span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

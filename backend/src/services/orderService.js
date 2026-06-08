@@ -28,7 +28,7 @@ export async function createSession(meta) {
  * Lock basket: create order with items, total, expected weight, QR token, expiresAt.
  * Log CHECKOUT, QR_GENERATED; compute risk and set flagged if needed.
  */
-export async function createOrderFromBasket({ sessionId, items }, req) {
+export async function createOrderFromBasket({ sessionId, items, scanDurationSeconds = null }, req) {
   if (!items || items.length === 0) {
     throw Object.assign(new Error('Basket is empty'), { statusCode: 400 });
   }
@@ -68,7 +68,6 @@ export async function createOrderFromBasket({ sessionId, items }, req) {
   const expiresAt = new Date(Date.now() + QR_EXPIRE_MS);
   const qrToken = uuidv4();
 
-  const scanDurationSeconds = null; // Frontend can send this in payload if tracked
   const riskScore = await calculateRiskScore({
     orderValue: totalPrice,
     scanDurationSeconds,
@@ -82,6 +81,7 @@ export async function createOrderFromBasket({ sessionId, items }, req) {
     items: orderItems,
     totalPrice,
     expectedWeightSum,
+    scanDurationSeconds,
     qrToken,
     expiresAt,
     status: 'LOCKED',

@@ -123,3 +123,74 @@ export async function setConfigForAdmin(data, userId) {
   }
   return getConfigForAdmin();
 }
+
+export async function getMlInsights() {
+  const Order = (await import('../models/Order.js')).default;
+  const VerificationLog = (await import('../models/VerificationLog.js')).default;
+
+  const orders = await Order.find({}).lean();
+  
+  // 1. Transaction values buckets
+  const valueBuckets = {
+    under50: 0,
+    from50to100: 0,
+    from100to250: 0,
+    from250to500: 0,
+    over500: 0,
+  };
+  
+  // 2. Risk score distribution
+  const riskDistribution = {
+    low: 0, // < 35
+    medium: 0, // 35 - 70
+    high: 0, // >= 70
+  };
+
+  let totalScanSeconds = 0;
+  let totalScanItemCount = 0;
+  let ordersWithScanDuration = 0;
+
+  for (const o of orders) {
+    const val = o.totalPrice || 0;
+    if (val <= 50) valueBuckets.under50++;
+    else if (val <= 100) valueBuckets.from50to100++;
+    else if (val <= 250) valueBuckets.from100to250++;
+    else if (val <= 500) valueBuckets.from250to500++;
+    else valueBuckets.over500++;
+
+    const risk = o.riskScore || 0;
+    if (risk < 35) riskDistribution.low++;
+    else if (risk < 70) riskDistribution.medium++;
+    else riskDistribution.high++;
+
+    if (o.scanDurationSeconds != null) {
+      totalScanSeconds += o.scanDurationSeconds;
+      const qty = o.items ? o.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 0;
+      totalScanItemCount += qty;
+      ordersWithScanDuration++;
+    }
+  }
+
+  // 3. Weight match / mismatch counts
+  const weightMatches = await VerificationLog.countDocuments({ type: 'weight', match: true });
+  const weightMismatches = await VerificationLog.countDocuments({ type: 'weight', match: false });
+
+  const avgScanDuration = ordersWithScanDuration > 0 ? (totalScanSeconds / ordersWithScanDuration) : 0;
+  const avgScanSpeed = totalScanItemCount > 0 ? (totalScanSeconds / totalScanItemCount) : 0;
+
+  return {
+    valueBuckets,
+    riskDistribution,
+    weightVerification: {
+      matches: weightMatches,
+      mismatches: weightMismatches,
+      total: weightMatches + weightMismatches,
+    },
+    scanSpeed: {
+      avgDuration: Math.round(avgScanDuration * 10) / 10,
+      avgSpeed: Math.round(avgScanSpeed * 10) / 10,
+      totalTrackedOrders: ordersWithScanDuration,
+    },
+    totalOrders: orders.length,
+  };
+}

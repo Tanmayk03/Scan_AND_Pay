@@ -45,5 +45,6 @@ router.get('/admin/config', authenticate, authorize('admin'), adminController.ge
 router.put('/admin/config', authenticate, authorize('admin'), adminController.setConfig);
 router.get('/admin/audit', authenticate, authorize('admin'), adminController.listAuditLogs);
 router.get('/admin/ml-status', authenticate, authorize('admin'), adminController.getMlStatus);
+router.get('/admin/ml-insights', authenticate, authorize('admin'), adminController.getMlInsights);
 
 export default router;

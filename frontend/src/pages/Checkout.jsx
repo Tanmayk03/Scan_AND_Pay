@@ -27,6 +27,7 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const [manualBarcode, setManualBarcode] = useState('');
   const [mobileUrl, setMobileUrl] = useState(null);
+  const [scanStartTime, setScanStartTime] = useState(null);
   
   const [showCatalog, setShowCatalog] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -76,6 +77,7 @@ export default function Checkout() {
       }
       return next;
     });
+    setScanStartTime((prev) => prev || Date.now());
     logBasketAction('ADD_ITEM', { barcode: product.barcode, productId: product._id, name: product.name });
     setShowCatalog(false);
   }, [sessionId, checkoutResult, logBasketAction]);
@@ -123,7 +125,8 @@ export default function Checkout() {
     setError('');
     try {
       const items = basket.map((i) => ({ productId: i.productId, quantity: i.quantity }));
-      const res = await orderApi.create(sessionId, items);
+      const scanDurationSeconds = scanStartTime ? Math.round((Date.now() - scanStartTime) / 1000) : null;
+      const res = await orderApi.create(sessionId, items, scanDurationSeconds);
       setCheckoutResult({
         orderId: res.orderId,
         qrToken: res.qrToken,
@@ -138,7 +141,7 @@ export default function Checkout() {
     } finally {
       setCheckoutLoading(false);
     }
-  }, [sessionId, basket, checkoutResult]);
+  }, [sessionId, basket, checkoutResult, scanStartTime]);
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
@@ -152,6 +155,7 @@ export default function Checkout() {
   const handleCloseQR = () => {
     setCheckoutResult(null);
     setBasket([]);
+    setScanStartTime(null);
     sessionApi.start().then((res) => setSessionId(res.sessionId)).catch(() => {});
   };
 

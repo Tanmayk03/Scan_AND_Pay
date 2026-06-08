@@ -20,6 +20,7 @@ const orderSchema = new mongoose.Schema(
     items: [orderItemSchema],
     totalPrice: { type: Number, required: true, min: 0 },
     expectedWeightSum: { type: Number, required: true, min: 0 }, // grams
+    scanDurationSeconds: { type: Number, default: null },
     qrToken: { type: String, unique: true, sparse: true, index: true },
     expiresAt: { type: Date, required: true, index: true },
     status: { type: String, enum: ['LOCKED', 'PAID', 'CANCELLED'], default: 'LOCKED', index: true },

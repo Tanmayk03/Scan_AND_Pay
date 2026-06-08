@@ -144,3 +144,12 @@ export async function getMlStatus(req, res, next) {
   }
 }
 
+export async function getMlInsights(req, res, next) {
+  try {
+    const insights = await adminService.getMlInsights();
+    res.json({ success: true, insights });
+  } catch (err) {
+    next(err);
+  }
+}
+

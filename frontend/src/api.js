@@ -41,7 +41,7 @@ export const sessionApi = {
 };
 
 export const orderApi = {
-  create: (sessionId, items) => api('/api/orders', { method: 'POST', body: JSON.stringify({ sessionId, items }) }),
+  create: (sessionId, items, scanDurationSeconds) => api('/api/orders', { method: 'POST', body: JSON.stringify({ sessionId, items, scanDurationSeconds }) }),
 };
 
 export const verifyApi = {
@@ -70,4 +70,5 @@ export const adminApi = {
   setConfig: (body) => api('/api/admin/config', { method: 'PUT', body: JSON.stringify(body) }),
   auditLogs: (params) => api('/api/admin/audit' + (params ? '?' + new URLSearchParams(params).toString() : '')),
   getMlStatus: () => api('/api/admin/ml-status'),
+  getMlInsights: () => api('/api/admin/ml-insights'),
 };
