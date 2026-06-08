@@ -179,12 +179,6 @@ export default function Checkout() {
         <a href="/admin/login" className="text-sm font-semibold text-muted hover:text-accent transition-colors">Admin Access</a>
       </header>
 
-      {mobileUrl && (
-        <p className="text-muted text-sm mb-4">
-          Open on phone: <a href={mobileUrl} className="text-accent break-all hover:underline" target="_blank" rel="noopener noreferrer">{mobileUrl}</a>
-        </p>
-      )}
-
       {error && (
         <div className="bg-error/15 border border-error text-error py-3 px-4 rounded-lg mb-6 shadow-sm" role="alert">
           {error}
