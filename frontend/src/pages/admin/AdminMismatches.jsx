@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../../api';
+import OrderDetailModal from '../../components/OrderDetailModal';
 
 export default function AdminMismatches() {
   const [mismatches, setMismatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   const loadMismatches = useCallback(async () => {
     setLoading(true);
@@ -47,26 +49,51 @@ export default function AdminMismatches() {
                 <th className={thClass}>Actual</th>
                 <th className={thClass}>Tolerance</th>
                 <th className={thClass}>Date</th>
+                <th className={thClass}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {mismatches.map((m, i) => (
                 <tr key={m.log?._id || i} className="hover:bg-bg-dark/50 transition-colors">
-                  <td className={thTdClass}><code className="text-[0.85em]">{m.order?._id?.slice(-8)}</code></td>
+                  <td className={thTdClass}>
+                    <button
+                      type="button"
+                      className="bg-transparent border-0 p-0 text-accent hover:underline font-mono font-bold text-[0.85em] cursor-pointer"
+                      onClick={() => setSelectedOrder(m.order)}
+                    >
+                      {m.order?._id?.slice(-8)}
+                    </button>
+                  </td>
                   <td className={thTdClass}>{m.log?.expectedWeight}g</td>
                   <td className={thTdClass}><span className="text-error font-semibold">{m.log?.actualWeight}g</span></td>
                   <td className={thTdClass}>±{m.log?.tolerance}g</td>
                   <td className={thTdClass}>{m.log?.createdAt ? new Date(m.log.createdAt).toLocaleString() : '–'}</td>
+                  <td className={thTdClass}>
+                    <button
+                      type="button"
+                      className="py-1 px-2.5 bg-accent text-white rounded text-xs hover:bg-accent/80 transition-colors"
+                      onClick={() => setSelectedOrder(m.order)}
+                    >
+                      View
+                    </button>
+                  </td>
                 </tr>
               ))}
               {mismatches.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="py-4 text-center text-muted">No mismatches found.</td>
+                  <td colSpan="6" className="py-4 text-center text-muted">No mismatches found.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
       )}
     </section>
   );
