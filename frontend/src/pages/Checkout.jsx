@@ -170,7 +170,7 @@ export default function Checkout() {
   const basketTotal = basket.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   return (
-    <div className="min-h-screen p-4 max-w-[1000px] mx-auto animate-fade-in print-hidden">
+    <div className="min-h-screen p-4 pb-24 lg:pb-4 max-w-[1000px] mx-auto animate-fade-in print-hidden">
       <header className="flex justify-between items-center mb-6 flex-wrap gap-3 bg-surface p-4 rounded-xl border border-border shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center font-bold text-white shadow-lg">S</div>
@@ -221,14 +221,16 @@ export default function Checkout() {
 
         <section className="flex flex-col gap-4 lg:col-span-2">
           <Basket items={basket} onRemove={handleRemove} disabled={!!checkoutResult} />
-          <button
-            type="button"
-            className="w-full py-4 bg-success text-white border-0 rounded-xl text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-success/20 transition-all active:scale-[0.98]"
-            onClick={handleCheckoutClick}
-            disabled={basket.length === 0 || checkoutLoading}
-          >
-            {checkoutLoading ? 'Processing…' : `Checkout (₹${basketTotal.toFixed(2)})`}
-          </button>
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-surface/90 backdrop-blur-md border-t border-border z-40 lg:relative lg:bottom-auto lg:left-auto lg:right-auto lg:p-0 lg:bg-transparent lg:border-t-0 lg:z-0 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] lg:shadow-none">
+            <button
+              type="button"
+              className="w-full py-3.5 md:py-4 bg-success text-white border-0 rounded-xl text-base md:text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-success/20 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-success/30"
+              onClick={handleCheckoutClick}
+              disabled={basket.length === 0 || checkoutLoading}
+            >
+              {checkoutLoading ? 'Processing…' : `Checkout (₹${basketTotal.toFixed(2)})`}
+            </button>
+          </div>
         </section>
       </div>
 

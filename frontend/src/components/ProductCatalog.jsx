@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { productApi } from '../api';
 
 export default function ProductCatalog({ onClose, onSelect }) {
@@ -22,7 +23,7 @@ export default function ProductCatalog({ onClose, onSelect }) {
     fetchProducts(search);
   }, [search, fetchProducts]);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 animate-fade-in backdrop-blur-sm">
       <div className="bg-surface border border-border rounded-xl p-6 max-w-[500px] w-full flex flex-col max-h-[80vh] shadow-2xl">
         <div className="flex justify-between items-center mb-4">
@@ -66,6 +67,7 @@ export default function ProductCatalog({ onClose, onSelect }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

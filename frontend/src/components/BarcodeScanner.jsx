@@ -107,11 +107,29 @@ export default function BarcodeScanner({ onScan, disabled = false }) {
   }
 
   return (
-    <div className="relative w-full max-w-[400px] mx-auto rounded-lg overflow-hidden bg-surface border border-border">
+    <div className="relative w-full max-w-[400px] mx-auto rounded-lg overflow-hidden bg-surface border border-border shadow-md">
       <div id={SCANNER_CONTAINER_ID} className="w-full min-h-[240px]" />
       {status === 'starting' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-sm z-10 animate-pulse font-medium">
           Starting camera…
+        </div>
+      )}
+      {status === 'scanning' && (
+        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 z-10">
+          {/* Laser scanning line */}
+          <div className="w-[calc(100%-3rem)] h-[2px] bg-red-500 shadow-[0_0_8px_2px_rgba(239,68,68,0.8)] animate-laser absolute left-6"></div>
+          
+          {/* Scanner framing guide corners */}
+          <div className="absolute top-6 left-6 w-6 h-6 border-t-2 border-l-2 border-accent"></div>
+          <div className="absolute top-6 right-6 w-6 h-6 border-t-2 border-r-2 border-accent"></div>
+          <div className="absolute bottom-6 left-6 w-6 h-6 border-b-2 border-l-2 border-accent"></div>
+          <div className="absolute bottom-6 right-6 w-6 h-6 border-b-2 border-r-2 border-accent"></div>
+          
+          {/* Top banner overlay */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-accent/20 border border-accent/30 text-accent font-semibold text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase flex items-center gap-1.5 backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+            Scan Barcode
+          </div>
         </div>
       )}
     </div>

@@ -34,6 +34,16 @@
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes laserSweep {
+  0% { top: 12%; opacity: 0.5; }
+  50% { top: 88%; opacity: 1; }
+  100% { top: 12%; opacity: 0.5; }
+}
+
+.animate-laser {
+  animation: laserSweep 2.5s infinite ease-in-out;
+}
+
 /* Print Styles */
 @media print {
   body * {

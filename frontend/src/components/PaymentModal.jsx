@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function PaymentModal({ total, onSuccess, onClose }) {
   const [method, setMethod] = useState(null); // 'upi' | 'card'
@@ -14,7 +15,7 @@ export default function PaymentModal({ total, onSuccess, onClose }) {
     }, 2000);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[110] p-4 animate-fade-in backdrop-blur-sm">
       <div className="bg-surface border border-border rounded-xl p-6 max-w-[400px] w-full shadow-2xl relative">
         <div className="flex justify-between items-center mb-6 border-b border-border pb-3">
@@ -70,6 +71,7 @@ export default function PaymentModal({ total, onSuccess, onClose }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

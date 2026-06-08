@@ -1,7 +1,5 @@
-/**
- * Post-checkout: display QR code for verification and optional weight entry.
- */
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { verifyApi } from '../api';
 
@@ -32,7 +30,7 @@ export default function CheckoutQR({ orderId, qrToken, totalPrice, expectedWeigh
 
   const expired = expiresAt ? new Date(expiresAt) < new Date() : false;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
       <div className="bg-surface border border-border rounded-lg p-6 max-w-[360px] w-full text-center">
         <h2 className="m-0 mb-1 text-xl">Payment QR</h2>
@@ -138,6 +136,7 @@ export default function CheckoutQR({ orderId, qrToken, totalPrice, expectedWeigh
           <p className="mt-2 text-sm text-gray-500">Scan to verify</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
